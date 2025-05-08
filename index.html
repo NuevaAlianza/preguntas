@@ -2,161 +2,176 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Consulta de Preguntas</title>
   <style>
     body {
-      font-family: sans-serif;
-      padding: 1em;
-      margin: 0;
-      background: #f0f0f0;
-      color: #333;
-    }
-    .container {
-      max-width: 600px;
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+      max-width: 800px;
       margin: auto;
-      background: white;
-      padding: 1em;
-      border-radius: 1em;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     h1 {
-      font-size: 1.5em;
       text-align: center;
+      margin-bottom: 1rem;
     }
-    select, button {
-      width: 100%;
-      padding: 0.5em;
-      margin: 0.5em 0;
-      font-size: 1em;
+    label, select, button {
+      display: block;
+      margin: 0.5rem 0;
     }
-    .question, .answer, .progress-bar {
-      margin: 1em 0;
+    .question-box, .response-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background-color: #f9f9f9;
     }
     .progress-bar {
-      height: 20px;
       width: 100%;
-      background: #ccc;
+      height: 20px;
+      margin-top: 1rem;
+      background-color: lightgray;
       border-radius: 10px;
       overflow: hidden;
     }
     .progress {
       height: 100%;
       width: 100%;
-      background: green;
+      background-color: green;
       transition: width 1s linear;
     }
     .hidden {
       display: none;
     }
+    @media (max-width: 600px) {
+      body {
+        padding: 0.5rem;
+      }
+    }
   </style>
 </head>
 <body>
-<div class="container">
   <h1>Consulta de Preguntas</h1>
-  <p id="total">Cargando preguntas...</p>
-  <div>
-    <label>Selecciona hasta 3 temas:</label>
-    <select id="topics" multiple size="5"></select>
-    <button id="selectBtn">Seleccionar preguntas</button>
-  </div>
-  <div>
-    <button id="nextBtn" class="hidden">Ver siguiente pregunta</button>
-    <div class="question hidden" id="questionBox"></div>
-    <div class="progress-bar hidden">
-      <div class="progress" id="progress"></div>
+  <p id="totalPreguntas"></p>
+
+  <label for="temas">Selecciona hasta 3 temas:</label>
+  <select id="temas" multiple size="6"></select>
+  <button id="seleccionarPreguntas">Seleccionar preguntas</button>
+  <button id="verPregunta" disabled>Ver siguiente pregunta</button>
+
+  <div class="question-box hidden" id="preguntaBox">
+    <p><strong>Tema:</strong> <span id="tema"></span></p>
+    <p><strong>Pregunta:</strong> <span id="pregunta"></span></p>
+
+    <div class="progress-bar">
+      <div id="barra" class="progress"></div>
     </div>
-    <button id="showAnswerBtn" class="hidden">Mostrar respuesta ahora</button>
-    <div class="answer hidden" id="answerBox"></div>
+    <button id="mostrarRespuesta">Mostrar respuesta ahora</button>
   </div>
-</div>
-<script>
-let questions = [], selected = [], current = 0, timer;
-let csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTdFQb05RiZ5CPUh8brf-HWARLiMs-UaQFdXRj8iZmonLnKJr_R6Mlzy8FDnGkKc1rZC2SS5LvHx4aa/pub?output=csv";
 
-fetch(csvUrl)
-  .then(res => res.text())
-  .then(data => {
-    questions = data.trim().split("\n").map(row => {
-      let [q, a, t] = row.split(",");
-      return { pregunta: q, respuesta: a, tema: t };
-    });
-    document.getElementById("total").innerText = `${questions.length} preguntas disponibles.`;
-    let temas = [...new Set(questions.map(q => q.tema))];
-    let select = document.getElementById("topics");
-    temas.forEach(t => {
-      let opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = t;
-      select.appendChild(opt);
-    });
-  });
+  <div class="response-box hidden" id="respuestaBox">
+    <p><strong>Respuesta:</strong> <span id="respuesta"></span></p>
+  </div>
 
-function shuffle(arr) {
-  return arr.sort(() => Math.random() - 0.5);
-}
+  <script>
+    const urlCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTdFQb05RiZ5CPUh8brf-HWARLiMs-UaQFdXRj8iZmonLnKJr_R6Mlzy8FDnGkKc1rZC2SS5LvHx4aa/pub?output=csv';
+    let datos = [];
+    let preguntasFiltradas = [];
+    let index = 0;
+    let timer = null;
 
-document.getElementById("selectBtn").onclick = () => {
-  let selectedTopics = Array.from(document.getElementById("topics").selectedOptions).map(o => o.value);
-  if (selectedTopics.length === 0 || selectedTopics.length > 3) {
-    alert("Selecciona entre 1 y 3 temas.");
-    return;
-  }
-  selected = shuffle(questions.filter(q => selectedTopics.includes(q.tema))).slice(0, 15);
-  current = 0;
-  document.getElementById("nextBtn").classList.remove("hidden");
-  document.getElementById("questionBox").classList.add("hidden");
-  document.getElementById("answerBox").classList.add("hidden");
-  document.getElementById("showAnswerBtn").classList.add("hidden");
-};
+    async function cargarCSV() {
+      const resp = await fetch(urlCSV);
+      const texto = await resp.text();
+      const filas = texto.trim().split('\n').map(f => f.split(','));
 
-document.getElementById("nextBtn").onclick = showQuestion;
+      datos = filas.map(f => ({
+        pregunta: f[0],
+        respuesta: f[1],
+        tema: f[2]
+      }));
 
-document.getElementById("showAnswerBtn").onclick = () => {
-  clearInterval(timer);
-  document.getElementById("answerBox").textContent = selected[current].respuesta;
-  document.getElementById("answerBox").classList.remove("hidden");
-};
+      document.getElementById("totalPreguntas").textContent = `Total de preguntas: ${datos.length}`;
 
-function showQuestion() {
-  if (current >= selected.length) {
-    alert("No hay más preguntas.");
-    return;
-  }
-  let q = selected[current];
-  document.getElementById("questionBox").textContent = `(${q.tema}) ${q.pregunta}`;
-  document.getElementById("questionBox").classList.remove("hidden");
-  document.getElementById("answerBox").classList.add("hidden");
-  document.getElementById("showAnswerBtn").classList.remove("hidden");
-  startTimer(() => {
-    document.getElementById("answerBox").textContent = q.respuesta;
-    document.getElementById("answerBox").classList.remove("hidden");
-  });
-  current++;
-}
-
-function startTimer(callback) {
-  let bar = document.getElementById("progress");
-  let seconds = 58;
-  let total = seconds;
-  bar.style.width = "100%";
-  bar.style.background = "green";
-  document.querySelector(".progress-bar").classList.remove("hidden");
-
-  clearInterval(timer);
-  timer = setInterval(() => {
-    seconds--;
-    let percent = (seconds / total) * 100;
-    bar.style.width = `${percent}%`;
-    if (percent < 30) bar.style.background = "red";
-    else if (percent < 60) bar.style.background = "orange";
-
-    if (seconds <= 0) {
-      clearInterval(timer);
-      callback();
+      const temasUnicos = [...new Set(datos.map(d => d.tema))];
+      const select = document.getElementById("temas");
+      temasUnicos.forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        select.appendChild(opt);
+      });
     }
-  }, 1000);
-}
-</script>
+
+    function seleccionarPreguntas() {
+      const seleccionados = Array.from(document.getElementById("temas").selectedOptions).map(o => o.value);
+
+      if (seleccionados.length === 0) {
+        alert("Selecciona al menos un tema.");
+        return;
+      }
+      if (seleccionados.length > 3) {
+        alert("Solo puedes seleccionar hasta 3 temas.");
+        return;
+      }
+
+      const filtradas = datos.filter(d => seleccionados.includes(d.tema));
+      preguntasFiltradas = filtradas.sort(() => Math.random() - 0.5).slice(0, 15);
+      index = 0;
+
+      document.getElementById("verPregunta").disabled = false;
+      document.getElementById("preguntaBox").classList.add("hidden");
+      document.getElementById("respuestaBox").classList.add("hidden");
+    }
+
+    function mostrarPregunta() {
+      if (index >= preguntasFiltradas.length) {
+        alert("Ya no hay más preguntas.");
+        return;
+      }
+
+      const actual = preguntasFiltradas[index++];
+      document.getElementById("pregunta").textContent = actual.pregunta;
+      document.getElementById("tema").textContent = actual.tema;
+      document.getElementById("respuesta").textContent = actual.respuesta;
+
+      document.getElementById("preguntaBox").classList.remove("hidden");
+      document.getElementById("respuestaBox").classList.add("hidden");
+      iniciarBarra();
+    }
+
+    function iniciarBarra() {
+      const barra = document.getElementById("barra");
+      let segundos = 58;
+      barra.style.width = "100%";
+      barra.style.backgroundColor = "green";
+
+      timer = setInterval(() => {
+        segundos--;
+        const porcentaje = (segundos / 58) * 100;
+        barra.style.width = `${porcentaje}%`;
+
+        if (segundos <= 20) barra.style.backgroundColor = "orange";
+        if (segundos <= 10) barra.style.backgroundColor = "red";
+
+        if (segundos <= 0) {
+          clearInterval(timer);
+          document.getElementById("respuestaBox").classList.remove("hidden");
+        }
+      }, 1000);
+    }
+
+    function mostrarRespuestaAhora() {
+      clearInterval(timer);
+      document.getElementById("barra").style.width = "0%";
+      document.getElementById("respuestaBox").classList.remove("hidden");
+    }
+
+    document.getElementById("seleccionarPreguntas").addEventListener("click", seleccionarPreguntas);
+    document.getElementById("verPregunta").addEventListener("click", mostrarPregunta);
+    document.getElementById("mostrarRespuesta").addEventListener("click", mostrarRespuestaAhora);
+
+    cargarCSV();
+  </script>
 </body>
 </html>
