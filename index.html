@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Consulta de Preguntas</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,7 +14,6 @@
     }
     h1 {
       text-align: center;
-      margin-bottom: 1rem;
     }
     label, select, button {
       display: block;
@@ -80,31 +80,30 @@
     let index = 0;
     let timer = null;
 
-    async function cargarCSV() {
-      const resp = await fetch(urlCSV);
-      const texto = await resp.text();
-      const filas = texto.trim().split('\n').map(f => f.split(','));
+    function cargarCSV() {
+      Papa.parse(urlCSV, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          datos = results.data.map(row => ({
+            pregunta: row['pregunta']?.trim(),
+            respuesta: row['respuesta']?.trim(),
+            tema: row['tema']?.trim()
+          })).filter(d => d.pregunta && d.respuesta && d.tema);
 
-      // Eliminar encabezados si existen
-      if (filas[0][0].toLowerCase().includes('pregunta')) {
-        filas.shift();
-      }
+          document.getElementById("totalPreguntas").textContent = `Total de preguntas: ${datos.length}`;
 
-      datos = filas.map(f => ({
-        pregunta: f[0],
-        respuesta: f[1],
-        tema: f[2]
-      }));
+          const temasUnicos = [...new Set(datos.map(d => d.tema))];
+          const select = document.getElementById("temas");
+          select.innerHTML = ''; // limpiar
 
-      document.getElementById("totalPreguntas").textContent = `Total de preguntas: ${datos.length}`;
-
-      const temasUnicos = [...new Set(datos.map(d => d.tema))];
-      const select = document.getElementById("temas");
-      temasUnicos.forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        select.appendChild(opt);
+          temasUnicos.forEach(t => {
+            const opt = document.createElement("option");
+            opt.value = t;
+            opt.textContent = t;
+            select.appendChild(opt);
+          });
+        }
       });
     }
 
