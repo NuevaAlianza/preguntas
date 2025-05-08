@@ -85,6 +85,11 @@
       const texto = await resp.text();
       const filas = texto.trim().split('\n').map(f => f.split(','));
 
+      // Eliminar encabezados si existen
+      if (filas[0][0].toLowerCase().includes('pregunta')) {
+        filas.shift();
+      }
+
       datos = filas.map(f => ({
         pregunta: f[0],
         respuesta: f[1],
