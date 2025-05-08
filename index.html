@@ -38,16 +38,23 @@
     .oculto {
       display: none;
     }
+    #contadorPreguntas {
+      margin-top: 1rem;
+      font-weight: bold;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <h1>Consulta de Preguntas</h1>
   <p id="total"></p>
 
-  <label for="temas">Selecciona hasta 3 temas:</label>
+  <label for="temas">Selecciona hasta 3 temas (usa Ctrl o Cmd):</label>
   <select id="temas" multiple size="5"></select>
   <button id="cargar">Cargar preguntas</button>
   <button id="siguiente" disabled>Ver siguiente pregunta</button>
+
+  <div id="contadorPreguntas" class="oculto"></div>
 
   <div class="pregunta oculta">
     <h3 id="textoPregunta"></h3>
@@ -97,8 +104,10 @@
         preguntasSeleccionadas.push(...mezcladas);
       });
 
+      preguntasSeleccionadas = preguntasSeleccionadas.sort(() => 0.5 - Math.random());
       preguntaActual = 0;
       document.getElementById("siguiente").disabled = false;
+      document.getElementById("contadorPreguntas").classList.remove("oculto");
       mostrarPregunta();
     });
 
@@ -117,6 +126,7 @@
       document.getElementById("respuesta").classList.add("oculto");
       document.getElementById("verRespuesta").classList.remove("oculto");
 
+      document.getElementById("contadorPreguntas").innerText = `Preguntas restantes: ${preguntasSeleccionadas.length - preguntaActual - 1}`;
       iniciarBarra(respuesta);
       preguntaActual++;
     }
