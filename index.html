@@ -56,19 +56,20 @@
 
   <div id="contadorPreguntas" class="oculto"></div>
 
-  <div class="pregunta oculto">
+  <div class="pregunta oculta">
     <h3 id="textoPregunta"></h3>
     <p><strong>Tema:</strong> <span id="temaPregunta"></span></p>
   </div>
 
-  <div class="barra oculto" id="barra"></div>
+  <div class="barra oculta" id="barra"></div>
   <button id="verRespuesta" class="oculto">Ver respuesta</button>
-  <div class="respuesta oculto" id="respuesta"></div>
+  <div class="respuesta oculta" id="respuesta"></div>
 
   <!-- Sonidos -->
   <audio id="audioStart" src="start.mp3" preload="auto"></audio>
   <audio id="audioWarning" src="warning.mp3" preload="auto"></audio>
   <audio id="audioEnd" src="end.mp3" preload="auto"></audio>
+  <audio id="audioBackground" src="background.mp3" preload="auto" loop></audio>
 
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTdFQb05RiZ5CPUh8brf-HWARLiMs-UaQFdXRj8iZmonLnKJr_R6Mlzy8FDnGkKc1rZC2SS5LvHx4aa/pub?output=csv";
@@ -77,16 +78,15 @@
     let preguntaActual = 0;
     let timer, tiempo = 58;
 
-    const audioStart = document.getElementById("audioStart");
-    const audioWarning = document.getElementById("audioWarning");
-    const audioEnd = document.getElementById("audioEnd");
-
+    // Cargar datos CSV
     fetch(CSV_URL)
       .then(res => res.text())
       .then(data => {
         const filas = data.trim().split('\n');
         datos = filas.map(f => f.split(',')).filter(f => f.length >= 3);
+
         document.getElementById("total").innerText = `Total de preguntas: ${datos.length}`;
+
         const temasUnicos = [...new Set(datos.map(f => f[2].trim()))];
         const selector = document.getElementById("temas");
         temasUnicos.forEach(t => {
@@ -97,6 +97,7 @@
         });
       });
 
+    // Cargar preguntas al hacer clic en "Cargar preguntas"
     document.getElementById("cargar").addEventListener("click", () => {
       const seleccionados = Array.from(document.getElementById("temas").selectedOptions).map(o => o.value);
       if (seleccionados.length === 0 || seleccionados.length > 3) {
@@ -118,6 +119,7 @@
       mostrarPregunta();
     });
 
+    // Ver siguiente pregunta
     document.getElementById("siguiente").addEventListener("click", mostrarPregunta);
 
     function mostrarPregunta() {
@@ -138,6 +140,7 @@
       preguntaActual++;
     }
 
+    // Función para iniciar la barra de cuenta regresiva
     function iniciarBarra(respuesta) {
       let segundos = tiempo;
       const barra = document.getElementById("barra");
@@ -146,41 +149,45 @@
       barra.style.background = "green";
       document.getElementById("verRespuesta").disabled = false;
 
+      // Reproducir el sonido de fondo (expectativa)
+      const audioBackground = document.getElementById("audioBackground");
+      audioBackground.currentTime = 0;
+      audioBackground.volume = 1;
+      audioBackground.play();
+
+      // Reproducir el sonido de inicio
+      const audioStart = document.getElementById("audioStart");
       audioStart.currentTime = 0;
       audioStart.play();
+      audioBackground.volume = 0.2;
+      setTimeout(() => audioBackground.volume = 1, 1500);
 
       timer = setInterval(() => {
         segundos--;
         barra.style.width = `${(segundos / tiempo) * 100}%`;
-        if (segundos === 20) {
-          barra.style.background = "orange";
-          audioWarning.currentTime = 0;
-          audioWarning.play();
-        }
-        if (segundos === 10) {
-          barra.style.background = "red";
-        }
+        if (segundos <= 20) barra.style.background = "orange";
+        if (segundos <= 10) barra.style.background = "red";
         if (segundos <= 0) {
           clearInterval(timer);
           barra.classList.add("oculto");
           document.getElementById("respuesta").innerText = respuesta;
           document.getElementById("respuesta").classList.remove("oculto");
           document.getElementById("verRespuesta").classList.add("oculto");
-          audioEnd.currentTime = 0;
-          audioEnd.play();
+          audioBackground.pause();
         }
       }, 1000);
 
+      // Función cuando se hace clic en "Ver Respuesta"
       document.getElementById("verRespuesta").onclick = () => {
         clearInterval(timer);
         barra.classList.add("oculto");
         document.getElementById("respuesta").innerText = respuesta;
         document.getElementById("respuesta").classList.remove("oculto");
         document.getElementById("verRespuesta").classList.add("oculto");
-        audioEnd.currentTime = 0;
-        audioEnd.play();
+        audioBackground.pause();
       };
     }
   </script>
 </body>
 </html>
+
