@@ -2,46 +2,82 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Preguntas por Tema</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       padding: 1rem;
-      background: #f9f9f9;
-      color: #333;
-      max-width: 600px;
+      background: linear-gradient(to right, #f0f2f5, #dbe4f0);
+      color: #222;
+      max-width: 700px;
       margin: auto;
     }
+
     h1 {
       text-align: center;
+      color: #2a2a2a;
     }
+
     select, button {
-      padding: 0.5rem;
+      padding: 0.75rem;
       font-size: 1rem;
       margin: 0.5rem 0;
       width: 100%;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+
+    select {
+      background-color: #fff;
+    }
+
+    button {
+      background-color: #4a90e2;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #357ab8;
+    }
+
     .barra {
       height: 20px;
       background: green;
       transition: width 1s linear;
       margin-top: 1rem;
+      border-radius: 4px;
     }
+
     .pregunta, .respuesta {
       background: white;
       padding: 1rem;
       margin-top: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+
     .oculto {
       display: none;
     }
+
     #contadorPreguntas {
       margin-top: 1rem;
       font-weight: bold;
       text-align: center;
+    }
+
+    #siguiente.parpadeante {
+      animation: parpadear 1s infinite;
+      background-color: #28a745 !important;
+    }
+
+    @keyframes parpadear {
+      0%, 100% { background-color: #28a745; }
+      50% { background-color: #6dd66d; }
     }
   </style>
 </head>
@@ -70,6 +106,7 @@
   <audio id="audioWarning" src="warning.mp3" preload="auto"></audio>
   <audio id="audioEnd" src="end.mp3" preload="auto"></audio>
   <audio id="audioBackground" src="background.mp3" preload="auto" loop></audio>
+  <audio id="audioListo" src="listo.mp3" preload="auto"></audio>
 
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTdFQb05RiZ5CPUh8brf-HWARLiMs-UaQFdXRj8iZmonLnKJr_R6Mlzy8FDnGkKc1rZC2SS5LvHx4aa/pub?output=csv";
@@ -78,7 +115,12 @@
     let preguntaActual = 0;
     let timer, tiempo = 58;
 
-    // Cargar datos CSV
+    const audioStart = document.getElementById("audioStart");
+    const audioWarning = document.getElementById("audioWarning");
+    const audioEnd = document.getElementById("audioEnd");
+    const audioBackground = document.getElementById("audioBackground");
+    const audioListo = document.getElementById("audioListo");
+
     fetch(CSV_URL)
       .then(res => res.text())
       .then(data => {
@@ -97,7 +139,6 @@
         });
       });
 
-    // Cargar preguntas al hacer clic en "Cargar preguntas"
     document.getElementById("cargar").addEventListener("click", () => {
       const seleccionados = Array.from(document.getElementById("temas").selectedOptions).map(o => o.value);
       if (seleccionados.length === 0 || seleccionados.length > 3) {
@@ -119,7 +160,6 @@
       mostrarPregunta();
     });
 
-    // Ver siguiente pregunta
     document.getElementById("siguiente").addEventListener("click", mostrarPregunta);
 
     function mostrarPregunta() {
@@ -127,6 +167,9 @@
         alert("No hay más preguntas");
         return;
       }
+
+      // Botón no parpadea más
+      document.getElementById("siguiente").classList.remove("parpadeante");
 
       const [pregunta, respuesta, tema] = preguntasSeleccionadas[preguntaActual];
       document.getElementById("textoPregunta").innerText = pregunta;
@@ -140,7 +183,6 @@
       preguntaActual++;
     }
 
-    // Función para iniciar la barra de cuenta regresiva
     function iniciarBarra(respuesta) {
       let segundos = tiempo;
       const barra = document.getElementById("barra");
@@ -149,45 +191,49 @@
       barra.style.background = "green";
       document.getElementById("verRespuesta").disabled = false;
 
-      // Reproducir el sonido de fondo (expectativa)
-      const audioBackground = document.getElementById("audioBackground");
       audioBackground.currentTime = 0;
       audioBackground.volume = 1;
       audioBackground.play();
 
-      // Reproducir el sonido de inicio
-      const audioStart = document.getElementById("audioStart");
       audioStart.currentTime = 0;
       audioStart.play();
-      audioBackground.volume = 0.2;
-      setTimeout(() => audioBackground.volume = 1, 1500);
 
       timer = setInterval(() => {
         segundos--;
         barra.style.width = `${(segundos / tiempo) * 100}%`;
+
+        if (segundos === 10) {
+          audioWarning.currentTime = 0;
+          audioWarning.play();
+        }
+
         if (segundos <= 20) barra.style.background = "orange";
         if (segundos <= 10) barra.style.background = "red";
+
         if (segundos <= 0) {
           clearInterval(timer);
-          barra.classList.add("oculto");
-          document.getElementById("respuesta").innerText = respuesta;
-          document.getElementById("respuesta").classList.remove("oculto");
-          document.getElementById("verRespuesta").classList.add("oculto");
-          audioBackground.pause();
+          mostrarRespuesta(respuesta);
+          audioEnd.currentTime = 0;
+          audioEnd.play();
         }
       }, 1000);
 
-      // Función cuando se hace clic en "Ver Respuesta"
       document.getElementById("verRespuesta").onclick = () => {
         clearInterval(timer);
-        barra.classList.add("oculto");
-        document.getElementById("respuesta").innerText = respuesta;
-        document.getElementById("respuesta").classList.remove("oculto");
-        document.getElementById("verRespuesta").classList.add("oculto");
-        audioBackground.pause();
+        mostrarRespuesta(respuesta);
+        audioListo.currentTime = 0;
+        audioListo.play();
       };
+    }
+
+    function mostrarRespuesta(respuesta) {
+      document.getElementById("barra").classList.add("oculto");
+      document.getElementById("respuesta").innerText = respuesta;
+      document.getElementById("respuesta").classList.remove("oculto");
+      document.getElementById("verRespuesta").classList.add("oculto");
+      audioBackground.pause();
+      document.getElementById("siguiente").classList.add("parpadeante");
     }
   </script>
 </body>
 </html>
-
