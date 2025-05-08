@@ -56,14 +56,19 @@
 
   <div id="contadorPreguntas" class="oculto"></div>
 
-  <div class="pregunta oculta">
+  <div class="pregunta oculto">
     <h3 id="textoPregunta"></h3>
     <p><strong>Tema:</strong> <span id="temaPregunta"></span></p>
   </div>
 
-  <div class="barra oculta" id="barra"></div>
+  <div class="barra oculto" id="barra"></div>
   <button id="verRespuesta" class="oculto">Ver respuesta</button>
-  <div class="respuesta oculta" id="respuesta"></div>
+  <div class="respuesta oculto" id="respuesta"></div>
+
+  <!-- Sonidos -->
+  <audio id="audioStart" src="start.mp3" preload="auto"></audio>
+  <audio id="audioWarning" src="warning.mp3" preload="auto"></audio>
+  <audio id="audioEnd" src="end.mp3" preload="auto"></audio>
 
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTdFQb05RiZ5CPUh8brf-HWARLiMs-UaQFdXRj8iZmonLnKJr_R6Mlzy8FDnGkKc1rZC2SS5LvHx4aa/pub?output=csv";
@@ -72,14 +77,16 @@
     let preguntaActual = 0;
     let timer, tiempo = 58;
 
+    const audioStart = document.getElementById("audioStart");
+    const audioWarning = document.getElementById("audioWarning");
+    const audioEnd = document.getElementById("audioEnd");
+
     fetch(CSV_URL)
       .then(res => res.text())
       .then(data => {
         const filas = data.trim().split('\n');
         datos = filas.map(f => f.split(',')).filter(f => f.length >= 3);
-
         document.getElementById("total").innerText = `Total de preguntas: ${datos.length}`;
-
         const temasUnicos = [...new Set(datos.map(f => f[2].trim()))];
         const selector = document.getElementById("temas");
         temasUnicos.forEach(t => {
@@ -139,17 +146,28 @@
       barra.style.background = "green";
       document.getElementById("verRespuesta").disabled = false;
 
+      audioStart.currentTime = 0;
+      audioStart.play();
+
       timer = setInterval(() => {
         segundos--;
         barra.style.width = `${(segundos / tiempo) * 100}%`;
-        if (segundos <= 20) barra.style.background = "orange";
-        if (segundos <= 10) barra.style.background = "red";
+        if (segundos === 20) {
+          barra.style.background = "orange";
+          audioWarning.currentTime = 0;
+          audioWarning.play();
+        }
+        if (segundos === 10) {
+          barra.style.background = "red";
+        }
         if (segundos <= 0) {
           clearInterval(timer);
           barra.classList.add("oculto");
           document.getElementById("respuesta").innerText = respuesta;
           document.getElementById("respuesta").classList.remove("oculto");
           document.getElementById("verRespuesta").classList.add("oculto");
+          audioEnd.currentTime = 0;
+          audioEnd.play();
         }
       }, 1000);
 
@@ -159,6 +177,8 @@
         document.getElementById("respuesta").innerText = respuesta;
         document.getElementById("respuesta").classList.remove("oculto");
         document.getElementById("verRespuesta").classList.add("oculto");
+        audioEnd.currentTime = 0;
+        audioEnd.play();
       };
     }
   </script>
