@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consulta de Preguntas</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Consulta de Preguntas</h1>
+    <div id="tema-selector">
+      <h2>Selecciona hasta 3 temas:</h2>
+      <div id="temas"></div>
+      <button id="cargar-preguntas">Cargar preguntas</button>
+    </div>
+
+    <div id="pregunta-box" class="hidden">
+      <div id="pregunta-info">
+        <p><strong>Tema:</strong> <span id="tema"></span></p>
+        <p><strong>Pregunta:</strong> <span id="pregunta"></span></p>
+      </div>
+
+      <div id="barra-container">
+        <div id="barra"></div>
+      </div>
+      <audio id="tick-sound" src="tick.mp3"></audio>
+      <audio id="end-sound" src="end.mp3"></audio>
+
+      <button id="ver-respuesta">Ver respuesta ahora</button>
+      <p id="respuesta" class="hidden"></p>
+    </div>
+
+    <div id="navegacion" class="hidden">
+      <button id="siguiente">Siguiente pregunta</button>
+    </div>
+
+    <p id="total"></p>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
